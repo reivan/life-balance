@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Life Balance App — Dashboard</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#9aa6bf;--accent:#60a5fa;--good:#34d399;--bad:#f87171}
+    html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,Helvetica,Arial;color:#e6eef8;background:linear-gradient(180deg,#071029 0%, #071a2b 100%);}
+    .app{max-width:980px;margin:20px auto;padding:18px;}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    h1{font-size:18px;margin:0}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:16px;box-shadow:0 6px 30px rgba(2,6,23,0.6);}
+    .top{display:flex;gap:18px;align-items:center}
+    .circle-wrap{width:320px;height:320px;flex:0 0 320px;display:flex;align-items:center;justify-content:center}
+    svg{width:100%;height:100%}
+    .legend{flex:1}
+    .legend .area{display:flex;align-items:center;justify-content:space-between;padding:8px 6px;border-radius:8px;margin-bottom:8px}
+    .area .left{display:flex;align-items:center;gap:10px}
+    .swatch{width:20px;height:20px;border-radius:6px}
+    .small{font-size:13px;color:var(--muted)}
+    .highlight{font-weight:600}
+    .sliders{margin-top:14px}
+    .sliders .controls{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+    .sub{display:grid;grid-template-columns:1fr 160px 38px;gap:8px;align-items:center;padding:10px;border-radius:8px;background:rgba(255,255,255,0.01);margin-bottom:8px}
+    .sub .label{display:flex;flex-direction:column}
+    .sub input[type="text"]{background:transparent;border:1px dashed rgba(255,255,255,0.04);padding:6px;border-radius:6px;color:inherit}
+    .range-wrap{display:flex;align-items:center;gap:8px}
+    input[type=range]{width:120px}
+    button{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 10px;border-radius:8px;color:var(--muted);cursor:pointer}
+    .btn-primary{background:var(--accent);color:#012;color:font-weight:700;border:none}
+    .note{grid-column:1/-1;padding:8px;border-radius:6px;background:rgba(255,255,255,0.02);margin-top:6px}
+    .tiny{font-size:12px;color:var(--muted)}
+    .muted{color:var(--muted)}
+    .date-control{display:flex;gap:8px;align-items:center}
+    .pill{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.02)}
+    .empty{opacity:0.6;font-size:14px;padding:18px;text-align:center}
+    @media(max-width:720px){.top{flex-direction:column}.circle-wrap{width:260px;height:260px}.sub{grid-template-columns:1fr 140px 38px}}
+  </style>
+</head>
+<body>
+  <div id="app" class="app">
+    <header>
+      <h1>Life Balance — Dashboard</h1>
+      <div class="date-control">
+        <div class="pill small">Session date</div>
+        <input type="date" v-model="selectedDate" @change="loadForDate" />
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="top">
+        <div class="circle-wrap">
+          <!-- SVG circle divided into 4 quadrants -->
+          <svg viewBox="-110 -110 220 220" @keydown.esc="collapse()" tabindex="0">
+            <defs>
+              <linearGradient id="g0" x1="0" x2="1">
+                <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.8" />
+                <stop offset="100%" stop-color="#60a5fa" stop-opacity="0.2" />
+              </linearGradient>
+              <linearGradient id="g1" x1="0" x2="1">
+                <stop offset="0%" stop-color="#34d399" stop-opacity="0.8" />
+                <stop offset="100%" stop-color="#34d399" stop-opacity="0.15" />
+              </linearGradient>
+              <linearGradient id="g2" x1="0" x2="1">
+                <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.8" />
+                <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.15" />
+              </linearGradient>
+              <linearGradient id="g3" x1="0" x2="1">
+                <stop offset="0%" stop-color="#f87171" stop-opacity="0.85" />
+                <stop offset="100%" stop-color="#f87171" stop-opacity="0.12" />
+              </linearGradient>
+            </defs>
+
+            <!-- outer ring -->
+            <circle r="100" fill="rgba(255,255,255,0.02)" stroke="rgba(255,255,255,0.03)" stroke-width="1" />
+
+            <!-- Quadrants as paths -->
+            <g style="cursor:pointer">
+              <path :d="sectorPath(-90,0,100)" :fill="quadFill(0)" @click="toggleArea(0)" :stroke="selectedArea===0? 'white' : 'none'" stroke-width="1.5" />
+              <path :d="sectorPath(0,90,100)" :fill="quadFill(1)" @click="toggleArea(1)" :stroke="selectedArea===1? 'white' : 'none'" stroke-width="1.5" />
+              <path :d="sectorPath(90,180,100)" :fill="quadFill(2)" @click="toggleArea(2)" :stroke="selectedArea===2? 'white' : 'none'" stroke-width="1.5" />
+              <path :d="sectorPath(180,270,100)" :fill="quadFill(3)" @click="toggleArea(3)" :stroke="selectedArea===3? 'white' : 'none'" stroke-width="1.5" />
+            </g>
+
+            <!-- inner labels: place four small circles + scores -->
+            <g font-family="sans-serif" fill="#e6eef8" font-size="12" text-anchor="middle">
+              <!-- <g transform="translate(0,-60)">
+                <text y="0" :class="{'highlight':selectedArea===0}">{{labels[0]}}</text>
+                <text y="14" font-size="16" class="small">{{formatScore(avgFor(0))}}</text>
+              </g>
+              <g transform="translate(60,0)">
+                <text y="0" :class="{'highlight':selectedArea===1}">{{labels[1]}}</text>
+                <text y="14" font-size="16" class="small">{{formatScore(avgFor(1))}}</text>
+              </g>
+              <g transform="translate(0,60)">
+                <text y="0" :class="{'highlight':selectedArea===2}">{{labels[2]}}</text>
+                <text y="14" font-size="16" class="small">{{formatScore(avgFor(2))}}</text>
+              </g>
+              <g transform="translate(-60,0)">
+                <text y="0" :class="{'highlight':selectedArea===3}">{{labels[3]}}</text>
+                <text y="14" font-size="16" class="small">{{formatScore(avgFor(3))}}</text>
+              </g> -->
+
+              <!-- center overall average -->
+              <g transform="translate(0,0)">
+                <circle r="36" fill="rgba(255,255,255,0.03)" />
+                <text y="-4" font-size="13" class="muted">Overall</text>
+                <text y="14" font-size="20" class="highlight">{{formatScore(overallScore)}}</text>
+              </g>
+            </g>
+
+          </svg>
+        </div>
+
+        <div class="legend">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div>
+              <div class="small muted">Tap a quadrant to edit details</div>
+            </div>
+            <div>
+              <button @click="resetToday" title="Reset today's data">Reset</button>
+            </div>
+          </div>
+
+          <div v-for="(l,i) in labels" :key="i" class="area card" style="background:transparent;">
+            <div class="left">
+              <div class="swatch" :style="{background: areaColor(i)}"></div>
+              <div>
+                <div class="highlight">{{l}}</div>
+                <div class="small muted">{{subCount(i)}} subareas • avg {{formatScore(avgFor(i))}}</div>
+              </div>
+            </div>
+            <div class="highlight">{{formatScore(avgFor(i))}}</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- sliders area -->
+      <div class="sliders">
+        <div v-if="selectedArea===null" class="empty">No area selected — tap any quadrant to expand sliders below.</div>
+        <div v-else>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+            <div>
+              <div class="small muted">Editing</div>
+              <div class="highlight" style="font-size:18px">{{labels[selectedArea]}}</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button @click="addSubarea">+ Add subarea</button>
+              <button @click="collapse">Close</button>
+            </div>
+          </div>
+
+          <div class="controls">
+            <div class="tiny muted">Quick actions:</div>
+            <div style="flex:1"></div>
+            <div class="tiny muted">Aggregate: <span class="highlight">{{formatScore(avgFor(selectedArea))}}</span></div>
+          </div>
+
+          <div v-for="(s,idx) in areas[selectedArea].subs" :key="s.id" class="sub">
+            <div class="label">
+              <input type="text" v-model="s.label" @input="persist" placeholder="Subarea name" />
+              <div class="tiny muted">id: {{s.id}}</div>
+            </div>
+
+            <div class="range-wrap">
+              <input type="range" min="0" max="10" step="0.1" v-model.number="s.value" @input="persist" />
+              <div style="width:38px;text-align:center;font-weight:600;">{{numFmt(s.value)}}</div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+              <button @click="toggleNote(selectedArea, idx)" title="Toggle note">📝</button>
+              <button @click="removeSubarea(idx)" title="Remove subarea">🗑️</button>
+            </div>
+
+            <div v-if="s.noteVisible" class="note">
+              <textarea v-model="s.note" @input="persist" rows="2" style="width:100%;background:transparent;border:none;color:inherit;resize:vertical" placeholder="Notes (e.g. 'Been sleeping poorly')"></textarea>
+              <div class="tiny muted" style="display:flex;justify-content:space-between;align-items:center">
+                <div>{{s.note ? s.note.length : 0}} chars</div>
+                <div><button @click="clearNote(s)">Clear</button></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:12px;display:flex;gap:8px">
+            <button class="btn-primary" @click="saveSnapshot">Save snapshot</button>
+            <button @click="exportJSON">Export JSON</button>
+            <button @click="importPrompt">Import JSON</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <footer style="margin-top:12px;color:var(--muted);font-size:13px">Tip: data is stored locally per date. Use the date selector to switch sessions.</footer>
+  </div>
+
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script>
+    const {createApp, ref, reactive, computed, onMounted} = Vue;
+
+    createApp({
+      setup(){
+        const labels = reactive(["Relationships","Finance","Health","Purpose"]);
+
+        function mkSub(id){return {id, label:'', value:5, note:'', noteVisible:false}}
+
+        const today = new Date().toISOString().slice(0,10);
+        const selectedDate = ref(today);
+
+        // structure: areas[0..3] each {subs: [ {id,label,value,note} ] }
+        const areas = reactive({
+          0:{subs:[ mkSub(genId()) , mkSub(genId()) ]},
+          1:{subs:[ mkSub(genId()) ]},
+          2:{subs:[ mkSub(genId()), mkSub(genId()), mkSub(genId()) ]},
+          3:{subs:[ mkSub(genId()) ]}
+        });
+
+        const selectedArea = ref(null);
+
+        function genId(){return Math.random().toString(36).slice(2,9)}
+
+        function avgFor(i){
+          const list = areas[i].subs;
+          if(!list || list.length===0) return 0;
+          const sum = list.reduce((a,b)=>a + (Number(b.value)||0),0);
+          return sum / list.length;
+        }
+
+        const overallScore = computed(()=>{
+          const vals = [0,1,2,3].map(i=>avgFor(i));
+          const nonzero = vals.filter(v=>!isNaN(v));
+          const sum = nonzero.reduce((a,b)=>a+b,0);
+          return nonzero.length? sum/nonzero.length : 0;
+        });
+
+        function formatScore(v){ return (Math.round(v*10)/10).toFixed(1) }
+        function numFmt(v){ return (Math.round(v*10)/10).toFixed(1) }
+
+        function toggleArea(i){ selectedArea.value = (selectedArea.value===i? null : i) }
+        function collapse(){ selectedArea.value = null }
+
+        function addSubarea(){
+          const id = genId();
+          areas[selectedArea.value].subs.push(mkSub(id));
+          persist();
+        }
+
+        function removeSubarea(idx){
+          if(!confirm('Remove this subarea?')) return;
+          areas[selectedArea.value].subs.splice(idx,1);
+          persist();
+        }
+
+        function toggleNote(areaIdx, idx){
+          const s = areas[areaIdx].subs[idx];
+          s.noteVisible = !s.noteVisible;
+          persist();
+        }
+
+        function clearNote(s){ s.note=''; persist(); }
+
+        function subCount(i){ return areas[i].subs.length }
+
+        function areaColor(i){
+          const v = avgFor(i);
+          // pick color by index
+          const palette = ['#60a5fa','#34d399','#f59e0b','#f87171'];
+          // lighten/darken by value
+          const alpha = Math.max(0.15, Math.min(0.95, 0.15 + (v/10)*0.8));
+          return palette[i];
+        }
+
+        // SVG helpers: create a sector path from angles
+        function polarToCartesian(cx,cy,r,angle){
+          const rad = (angle) * Math.PI/180.0;
+          return {x: cx + (r * Math.cos(rad)), y: cy + (r * Math.sin(rad))};
+        }
+        function sectorPath(startAngle,endAngle,r){
+          // convert so 0 at right, clockwise; our svg center at 0,0
+          const sa = startAngle; const ea = endAngle;
+          const p1 = polarToCartesian(0,0,r,sa);
+          const p2 = polarToCartesian(0,0,r,ea);
+          const largeArc = (ea - sa) <= 180 ? 0 : 1;
+          return `M 0 0 L ${p1.x.toFixed(3)} ${p1.y.toFixed(3)} A ${r} ${r} 0 ${largeArc} 1 ${p2.x.toFixed(3)} ${p2.y.toFixed(3)} Z`;
+        }
+
+        // fill based on average — we use gradients defined in svg and apply opacity
+        function quadFill(i){
+          const avg = avgFor(i);
+          const id = ['url(#g0)','url(#g1)','url(#g2)','url(#g3)'][i];
+          // construct simple rgba overlay by mixing white alpha
+          // fallback to gradient
+          return id;
+        }
+
+        // persistence: localStorage keyed by date
+        function storageKey(date){ return 'life-balance:' + date }
+
+        function persist(){
+          try{
+            const snapshot = {labels:labels.slice(), areas:serializeAreas()};
+            localStorage.setItem(storageKey(selectedDate.value), JSON.stringify(snapshot));
+          }catch(e){console.error(e)}
+        }
+
+        function serializeAreas(){
+          const out = {};
+          for(let i=0;i<4;i++){
+            out[i] = {subs: areas[i].subs.map(s => ({id:s.id,label:s.label,value:s.value,note:s.note}))}
+          }
+          return out;
+        }
+
+        function loadForDate(){
+          const raw = localStorage.getItem(storageKey(selectedDate.value));
+          if(!raw){ // initialize default if not found
+            // keep current areas but persist
+            persist();
+            return;
+          }
+          try{
+            const parsed = JSON.parse(raw);
+            if(parsed.labels && parsed.labels.length===4){
+              for(let i=0;i<4;i++) labels[i]=parsed.labels[i];
+            }
+            if(parsed.areas){
+              for(let i=0;i<4;i++){
+                areas[i].subs.splice(0, areas[i].subs.length); // clear
+                const subs = parsed.areas[i].subs || [];
+                subs.forEach(s=>areas[i].subs.push({id:s.id,label:s.label,value:s.value||0,note:s.note||'',noteVisible:false}));
+              }
+            }
+          }catch(e){console.error('load failed',e)}
+        }
+
+        function resetToday(){
+          if(!confirm('Reset data for this date?')) return;
+          for(let i=0;i<4;i++){areas[i].subs.splice(0, areas[i].subs.length)}
+          // add one blank sub each
+          for(let i=0;i<4;i++){areas[i].subs.push(mkSub(genId()))}
+          persist();
+        }
+
+        function saveSnapshot(){
+          // just persist — kept for future extension
+          persist();
+          alert('Saved snapshot locally for ' + selectedDate.value);
+        }
+
+        function exportJSON(){
+          const data = JSON.stringify({date:selectedDate.value,labels:labels.slice(),areas:serializeAreas()},null,2);
+          const blob = new Blob([data],{type:'application/json'});
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a'); a.href=url; a.download = `life-balance-${selectedDate.value}.json`; a.click(); URL.revokeObjectURL(url);
+        }
+
+        function importPrompt(){
+          const text = prompt('Paste JSON exported from this app');
+          if(!text) return;
+          try{
+            const parsed = JSON.parse(text);
+            if(parsed.date) selectedDate.value = parsed.date;
+            if(parsed.labels){ for(let i=0;i<4;i++) labels[i]=parsed.labels[i] }
+            if(parsed.areas){ for(let i=0;i<4;i++){ areas[i].subs.splice(0, areas[i].subs.length); (parsed.areas[i].subs||[]).forEach(s=>areas[i].subs.push({id:s.id,label:s.label,value:s.value||0,note:s.note||'',noteVisible:false})) }}
+            persist();
+            alert('Imported');
+          }catch(e){alert('Invalid JSON')}
+        }
+
+        function exportStateForDebug(){ console.log(JSON.stringify({labels:labels,areas:serializeAreas()},null,2)) }
+
+        onMounted(()=>{
+          loadForDate();
+          // persist every few seconds to ensure quick save after interactions (safe for local apps)
+          setInterval(()=>persist(), 2000);
+        })
+
+        return { labels, areas, selectedArea, toggleArea, collapse, addSubarea, removeSubarea, toggleNote, clearNote, avgFor, overallScore, formatScore, numFmt, subCount, areaColor, sectorPath, quadFill, selectedDate, loadForDate, persist, resetToday, saveSnapshot, exportJSON, importPrompt }
+      }
+    }).mount('#app')
+  </script>
+</body>
+</html>
