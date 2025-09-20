@@ -33,7 +33,6 @@ const subareaModel = defineModel<Subarea>('subarea')
         type="range"
         min="0"
         max="10"
-        step="0.1"
         v-model.number="subareaModel.value"
         @input="emit('update:subarea')"
       />
