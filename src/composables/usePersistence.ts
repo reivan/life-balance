@@ -70,7 +70,7 @@ export function usePersistence(
               label: s.label,
               value: s.value || 0,
               note: s.note || '',
-              noteVisible: false,
+              noteVisible: !!s.note,
             }),
           )
         }
