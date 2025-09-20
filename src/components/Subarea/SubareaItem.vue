@@ -50,8 +50,8 @@ const subareaModel = defineModel<Subarea>('subarea')
       <textarea
         v-model="subareaModel.note"
         @input="emit('update:subarea')"
-        rows="2"
-        class="w-full bg-transparent border-none text-inherit resize-y"
+        rows="8"
+        class="w-full border-none text-inherit resize-y"
         :placeholder="t('subarea.notePlaceholder')"
       ></textarea>
       <div class="tiny muted flex justify-between items-center">
@@ -65,6 +65,10 @@ const subareaModel = defineModel<Subarea>('subarea')
 </template>
 
 <style scoped>
+textarea {
+  background-color: var(--bg);
+}
+
 .sub {
   display: grid;
   grid-template-columns: 1fr 160px 38px;
