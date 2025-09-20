@@ -13,8 +13,8 @@ function createSubarea(id: string): Subarea {
 export function useLifeBalanceData() {
   const labels: Labels = reactive(['Relationships', 'Finance', 'Health', 'Purpose'])
 
-  const today = new Date().toISOString().slice(0, 10)
-  const selectedDate: Ref<string> = ref(today)
+  const fixedDate = '2025-01-01' // TODO: remove date selection
+  const selectedDate: Ref<string> = ref(fixedDate)
 
   const areas: Record<number, Area> = reactive({
     0: { subs: [createSubarea(generateId()), createSubarea(generateId())] },
