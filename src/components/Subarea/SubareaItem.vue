@@ -4,7 +4,7 @@ import { useCalculations } from '../../composables/useCalculations'
 import { useI18n } from 'vue-i18n'
 import BaseButton from '../Input/BaseButton.vue'
 
-const props = defineProps<{
+defineProps<{
   subarea: Subarea
 }>()
 
@@ -21,7 +21,7 @@ const subareaModel = defineModel<Subarea>('subarea')
     <div class="label">
       <input
         type="text"
-        v-model="subareaModel.label"
+        v-model="subareaModel!.label"
         @input="emit('update:subarea')"
         :placeholder="t('subarea.namePlaceholder')"
       />
@@ -33,7 +33,7 @@ const subareaModel = defineModel<Subarea>('subarea')
         type="range"
         min="0"
         max="10"
-        v-model.number="subareaModel.value"
+        v-model.number="subareaModel!.value"
         @input="emit('update:subarea')"
       />
       <div style="width: 38px; text-align: center; font-weight: 600">
@@ -48,7 +48,7 @@ const subareaModel = defineModel<Subarea>('subarea')
 
     <div v-if="subarea.noteVisible" class="note">
       <textarea
-        v-model="subareaModel.note"
+        v-model="subareaModel!.note"
         @input="emit('update:subarea')"
         rows="8"
         class="w-full border-none text-inherit resize-y"
